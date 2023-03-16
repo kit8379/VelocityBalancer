@@ -39,7 +39,7 @@ public class VelocityBalancer {
 
     @Subscribe
     public void onProxyInitialize(ProxyInitializeEvent event) {
-        config = new Config();
+        config = new Config(logger);
         logger.info("Loaded config data: " + config.get("balancing-groups"));
 
         // Register commands

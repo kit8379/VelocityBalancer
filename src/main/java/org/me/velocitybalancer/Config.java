@@ -1,55 +1,85 @@
 package org.me.velocitybalancer;
 
-import org.yaml.snakeyaml.Yaml;
-import org.yaml.snakeyaml.constructor.Constructor;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import org.slf4j.Logger;
 
-import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.io.File;
+import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 
 public class Config {
+    private final File configFile;
+    private Map<String, Object> configData;
+    private final ObjectMapper mapper;
+    private final Logger logger;
 
-    private Map<String, Object> data;
 
-    public Config() {
-        load();
-    }
-
-    void load() {
-        Yaml yaml = new Yaml(new Constructor(Map.class));
-        Path dataFolder = Paths.get("plugins", "VelocityBalancer");
-        Path configFile = dataFolder.resolve("config.yml");
-
-        if (!Files.exists(dataFolder)) {
-            try {
-                Files.createDirectories(dataFolder);
-            } catch (IOException e) {
-                e.printStackTrace();
+    public Config(Logger logger) {
+        this.logger = logger;
+        // Create the plugin folder if it doesn't exist
+        mapper = new ObjectMapper(new YAMLFactory());
+        File pluginFolder = new File("plugins" + File.separator + "velocitybalancer");
+        if (!pluginFolder.exists()) {
+            boolean dirsCreated = pluginFolder.mkdirs();
+            if (!dirsCreated) {
+                logger.error("Failed to create plugin folder.");
             }
         }
 
-        if (!Files.exists(configFile)) {
-            try (InputStream is = getClass().getClassLoader().getResourceAsStream("config.yml")) {
-                if (is != null) {
-                    Files.copy(is, configFile);
+        configFile = new File(pluginFolder, "config.yml");
+
+        // Create the config.yml file if it doesn't exist
+        if (!configFile.exists()) {
+            try {
+                boolean fileCreated = configFile.createNewFile();
+                if (!fileCreated) {
+                    logger.error("Failed to create config file.");
                 } else {
-                    throw new FileNotFoundException("Default config.yml not found in the plugin resources.");
+                    configData = createDefaultConfig();
+                    saveConfig();
                 }
             } catch (IOException e) {
                 e.printStackTrace();
             }
+        } else {
+            load();
         }
+    }
 
-        try (InputStreamReader reader = new InputStreamReader(new FileInputStream(configFile.toFile()))) {
-            data = yaml.load(reader);
+
+    public Object get(String key) {
+        return configData.get(key);
+    }
+
+    public void load() {
+        try {
+            configData = mapper.readValue(configFile, new TypeReference<HashMap<String, Object>>() {});
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public Object get(String key) {
-        return data.get(key);
+    public void saveConfig() {
+        try {
+            mapper.writeValue(configFile, configData);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private Map<String, Object> createDefaultConfig() {
+        Map<String, Object> defaultConfig = new HashMap<>();
+
+        defaultConfig.put("offlinedetection", true);
+        defaultConfig.put("detectioninterval", 60);
+        defaultConfig.put("lobbygroup", "lobby");
+        defaultConfig.put("force-lobby-group", false);
+        defaultConfig.put("balancing-groups", new HashMap<String, Object>());
+        defaultConfig.put("permission-redirect", new HashMap<String, Object>());
+
+        return defaultConfig;
     }
 }
