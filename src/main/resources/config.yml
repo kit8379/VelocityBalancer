@@ -1,0 +1,16 @@
+offlinedetection: true
+detectioninterval: 60
+lobbygroup: "lobby"
+force-lobby-group: false
+balancing-groups:
+  example:
+    balancing: true
+    permission-redirect:
+      myplugin.vip: "vip-servers"
+    servers:
+      - "example-server-*"
+  vip-servers:
+    balancing: true
+    servers:
+      - "vip-server-1"
+      - "vip-server-2"
