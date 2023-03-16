@@ -3,8 +3,8 @@ package org.me.velocitybalancer;
 import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.command.SimpleCommand;
 import com.velocitypowered.api.event.Subscribe;
-import com.velocitypowered.api.event.connection.PostLoginEvent;
 import com.velocitypowered.api.event.player.KickedFromServerEvent;
+import com.velocitypowered.api.event.player.ServerPreConnectEvent;
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
 import com.velocitypowered.api.plugin.Plugin;
 import com.velocitypowered.api.proxy.Player;
@@ -55,18 +55,9 @@ public class VelocityBalancer {
     }
 
     @Subscribe
-    public void onPostLogin(PostLoginEvent event) {
+    public void onServerPreConnect(ServerPreConnectEvent event) {
         Player player = event.getPlayer();
-        String lobbyGroup = (String) config.get("lobbygroup");
-        boolean forceLobbyGroup = (Boolean) config.get("force-lobby-group");
-
-        if (forceLobbyGroup && lobbyGroup != null) {
-            RegisteredServer lobbyServer = getBalancedServer(lobbyGroup, player);
-            if (lobbyServer != null) {
-                player.createConnectionRequest(lobbyServer).fireAndForget();
-                return;
-            }
-        }
+        RegisteredServer targetServer = event.getOriginalServer();
 
         @SuppressWarnings("unchecked")
         Map<String, Object> balancingGroups = (Map<String, Object>) config.get("balancing-groups");
@@ -74,10 +65,13 @@ public class VelocityBalancer {
             @SuppressWarnings("unchecked")
             Map<String, Object> group = (Map<String, Object>) balancingGroups.get(groupName);
             boolean isBalancing = (Boolean) group.get("balancing");
-            if (isBalancing) {
+            @SuppressWarnings("unchecked")
+            List<String> servers = (List<String>) group.get("servers");
+
+            if (isBalancing && servers.contains(targetServer.getServerInfo().getName())) {
                 RegisteredServer balancedServer = getBalancedServer(groupName, player);
                 if (balancedServer != null) {
-                    player.createConnectionRequest(balancedServer).fireAndForget();
+                    event.setResult(ServerPreConnectEvent.ServerResult.allowed(balancedServer));
                     break;
                 }
             }

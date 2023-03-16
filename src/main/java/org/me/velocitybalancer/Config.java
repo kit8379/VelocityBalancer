@@ -76,9 +76,7 @@ public class Config {
         defaultConfig.put("offlinedetection", true);
         defaultConfig.put("detectioninterval", 60);
         defaultConfig.put("lobbygroup", "lobby");
-        defaultConfig.put("force-lobby-group", false);
         defaultConfig.put("balancing-groups", new HashMap<String, Object>());
-        defaultConfig.put("permission-redirect", new HashMap<String, Object>());
 
         return defaultConfig;
     }
