@@ -1,34 +1,39 @@
 package org.me.velocitybalancer;
 
+import com.google.inject.Inject;
 import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.command.SimpleCommand;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.player.KickedFromServerEvent;
 import com.velocitypowered.api.event.player.ServerPreConnectEvent;
-import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
 import com.velocitypowered.api.plugin.Plugin;
 import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
 import com.velocitypowered.api.proxy.server.RegisteredServer;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.slf4j.Logger;
+import org.spongepowered.configurate.ConfigurateException;
+import org.spongepowered.configurate.ConfigurationNode;
+import org.spongepowered.configurate.yaml.NodeStyle;
+import org.spongepowered.configurate.yaml.YamlConfigurationLoader;
 
-import javax.inject.Inject;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+
 
 @Plugin(id = "velocitybalancer", name = "VelocityBalancer", version = "1.0", description = "A plugin to balance player connections across server groups")
 public class VelocityBalancer {
 
     private final ProxyServer proxy;
     private final Logger logger;
-    private Config config;
+    private ConfigurationNode configRoot;
     private final Map<String, Boolean> serverStatus = new ConcurrentHashMap<>();
 
 
@@ -36,24 +41,51 @@ public class VelocityBalancer {
     public VelocityBalancer(ProxyServer proxy, Logger logger) {
         this.proxy = proxy;
         this.logger = logger;
-    }
-
-    @Subscribe
-    public void onProxyInitialize(ProxyInitializeEvent event) {
-        config = new Config(logger);
-        logger.info("Loaded config data: " + config.get("balancing-groups"));
+        createConfigIfNotExists();
 
         // Register commands
-        proxy.getCommandManager().register("vbreload", new ReloadCommand());
         proxy.getCommandManager().register("hub", new LobbyCommand(), "lobby");
         proxy.getCommandManager().register("send", new SendCommand());
         proxy.getCommandManager().register("bsend", new BalanceSendCommand());
 
         // Offline server detection
-        if ((Boolean) config.get("offlinedetection")) {
-            long detectionInterval = (Integer) config.get("detectioninterval");
+        if (configRoot.node("offlinedetection").getBoolean()) {
+            long detectionInterval = configRoot.node("detectioninterval").getInt();
             proxy.getScheduler().buildTask(this, this::checkOfflineServers)
                     .repeat(detectionInterval, TimeUnit.SECONDS).schedule();
+        }
+    }
+
+    private void createConfigIfNotExists() {
+        Path configPath = Paths.get("plugins", "velocitybalancer");
+        Path configFile = configPath.resolve("config.yml");
+        try {
+            Files.createDirectories(configPath);
+            if (Files.notExists(configFile)) {
+                Files.createFile(configFile);
+            }
+            YamlConfigurationLoader loader = YamlConfigurationLoader.builder()
+                    .path(configFile)
+                    .nodeStyle(NodeStyle.BLOCK)
+                    .build();
+            configRoot = loader.load();
+            if (configRoot.empty()) {
+                configRoot.node("lobbygroup").set("authgroup");
+                configRoot.node("offlinedetection").set(true);
+                configRoot.node("detectioninterval").set(10);
+                configRoot.node("balancing-groups", "authgroup", "servers").set(Arrays.asList("auth1", "auth2"));
+                configRoot.node("balancing-groups", "authgroup", "balancing").set(true);
+                configRoot.node("balancing-groups", "authgroup", "permission-redirect", "player.verifed").set("lobbygroup");
+                configRoot.node("balancing-groups", "lobbygroup", "servers").set(Arrays.asList("lobby1", "lobby2"));
+                configRoot.node("balancing-groups", "lobbygroup", "balancing").set(true);
+                configRoot.node("balancing-groups", "lobbygroup", "permission-redirect").set(Collections.emptyMap());
+
+                loader.save(configRoot);
+            }
+        } catch (ConfigurateException e) {
+            throw new RuntimeException(e);
+        } catch (IOException e) {
+            logger.error("Error creating directories or config file", e);
         }
     }
 
@@ -62,12 +94,13 @@ public class VelocityBalancer {
         Player player = event.getPlayer();
         RegisteredServer targetServer = event.getOriginalServer();
 
-        @SuppressWarnings("unchecked")
-        Map<String, Object> balancingGroups = (Map<String, Object>) config.get("balancing-groups");
+        Map<String, Object> balancingGroups = configRoot.node("balancing-groups").childrenMap().entrySet().stream().collect(Collectors.toMap(e -> e.getKey().toString(), e -> e.getValue().raw()));
+
         for (String groupName : balancingGroups.keySet()) {
             @SuppressWarnings("unchecked")
             Map<String, Object> group = (Map<String, Object>) balancingGroups.get(groupName);
             boolean isBalancing = (Boolean) group.get("balancing");
+
             @SuppressWarnings("unchecked")
             List<String> servers = (List<String>) group.get("servers");
 
@@ -79,14 +112,13 @@ public class VelocityBalancer {
                 }
             }
         }
-        event.setResult(ServerPreConnectEvent.ServerResult.allowed(targetServer));
     }
 
 
     @Subscribe
     public void onKickedFromServer(KickedFromServerEvent event) {
         Player player = event.getPlayer();
-        String lobbyGroup = (String) config.get("lobbygroup");
+        String lobbyGroup = configRoot.node("lobbygroup").getString();
 
         if (lobbyGroup != null) {
             RegisteredServer lobbyServer = getBalancedServer(lobbyGroup, player);
@@ -97,8 +129,9 @@ public class VelocityBalancer {
     }
 
     private RegisteredServer getBalancedServer(String groupName, Player player) {
-        @SuppressWarnings("unchecked")
-        Map<String, Object> balancingGroups = (Map<String, Object>) config.get("balancing-groups");
+
+        Map<String, Object> balancingGroups = configRoot.node("balancing-groups").childrenMap().entrySet().stream().collect(Collectors.toMap(e -> e.getKey().toString(), e -> e.getValue().raw()));
+
         @SuppressWarnings("unchecked")
         Map<String, Object> group = (Map<String, Object>) balancingGroups.get(groupName);
 
@@ -155,8 +188,8 @@ public class VelocityBalancer {
     }
 
     private void checkOfflineServers() {
-        @SuppressWarnings("unchecked")
-        Map<String, Object> balancingGroups = (Map<String, Object>) config.get("balancing-groups");
+
+        Map<String, Object> balancingGroups = configRoot.node("balancing-groups").childrenMap().entrySet().stream().collect(Collectors.toMap(e -> e.getKey().toString(), e -> e.getValue().raw()));
 
         for (Map.Entry<String, Object> groupEntry : balancingGroups.entrySet()) {
             @SuppressWarnings("unchecked")
@@ -184,19 +217,9 @@ public class VelocityBalancer {
         }
     }
 
-
-    private class ReloadCommand implements SimpleCommand {
-        @Override
-        public void execute(@NonNull Invocation invocation) {
-            config.load();
-            invocation.source().sendMessage(Component.text("VelocityBalancer config reloaded."));
-        }
-    }
-
-
     private class LobbyCommand implements SimpleCommand {
         @Override
-        public void execute(@NonNull Invocation invocation) {
+        public void execute(Invocation invocation) {
             CommandSource source = invocation.source();
             if (!(source instanceof Player)) {
                 source.sendMessage(Component.text("This command can only be used by a player."));
@@ -204,7 +227,7 @@ public class VelocityBalancer {
             }
 
             Player player = (Player) source;
-            String lobbyGroup = (String) config.get("lobbygroup");
+            String lobbyGroup = configRoot.node("lobbygroup").getString();
 
             if (lobbyGroup != null) {
                 RegisteredServer lobbyServer = getBalancedServer(lobbyGroup, player);
@@ -217,31 +240,32 @@ public class VelocityBalancer {
 
     private class BalanceSendCommand implements SimpleCommand {
         @Override
-        public void execute(@NonNull Invocation invocation) {
+        public void execute(Invocation invocation) {
             CommandSource source = invocation.source();
             String[] args = invocation.arguments();
-
-            if (!(source instanceof Player)) {
-                source.sendMessage(Component.text("Console must specific a player name."));
-                return;
-            }
 
             Player player = (Player) source;
 
             if (!player.hasPermission("velocitybalancer.send")) {
-                source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize("No permission."));
+                String noPermissionMessage = configRoot.node("messages", "no-permission").getString();
+                assert noPermissionMessage != null;
+                source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(noPermissionMessage));
                 return;
             }
 
             if (args.length < 2) {
-                source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize("Usage: /bsend <user> <server>"));
+                String bsendUsageMessage = configRoot.node("messages", "bsend-usage").getString();
+                assert bsendUsageMessage != null;
+                source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(bsendUsageMessage));
                 return;
             }
 
             if (args[0].equalsIgnoreCase("all")) {
                 RegisteredServer server = proxy.getServer(args[1]).orElse(null);
                 if (server == null) {
-                    source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize("Server not found."));
+                    String serverNotFoundMessage = configRoot.node("messages", "server-not-found").getString();
+                    assert serverNotFoundMessage != null;
+                    source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(serverNotFoundMessage));
                     return;
                 }
                 for (Player p : proxy.getAllPlayers()) {
@@ -257,7 +281,9 @@ public class VelocityBalancer {
 
             Player target = proxy.getPlayer(args[0]).orElse(null);
             if (target == null) {
-                source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize("Player not found."));
+                String playerNotFoundMessage = configRoot.node("messages", "player-not-found").getString();
+                assert playerNotFoundMessage != null;
+                source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(playerNotFoundMessage));
                 return;
             }
 
@@ -273,37 +299,40 @@ public class VelocityBalancer {
                 return;
             }
 
-            source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize("Server not found."));
+            String serverNotFoundMessage = configRoot.node("messages", "server-not-found").getString();
+            assert serverNotFoundMessage != null;
+            source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(serverNotFoundMessage));
         }
     }
 
     private class SendCommand implements SimpleCommand {
         @Override
-        public void execute(@NonNull Invocation invocation) {
+        public void execute(Invocation invocation) {
             CommandSource source = invocation.source();
             String[] args = invocation.arguments();
-
-            if (!(source instanceof Player)) {
-                source.sendMessage(Component.text("Console must specific a player name."));
-                return;
-            }
 
             Player player = (Player) source;
 
             if (!player.hasPermission("velocitybalancer.forcesend")) {
-                source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize("No permission."));
+                String noPermissionMessage = configRoot.node("messages", "no-permission").getString();
+                assert noPermissionMessage != null;
+                source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(noPermissionMessage));
                 return;
             }
 
             if (args.length < 2) {
-                source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize("Usage: /send <user> <server>"));
+                String sendUsageMessage = configRoot.node("messages", "send-usage").getString();
+                assert sendUsageMessage != null;
+                source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(sendUsageMessage));
                 return;
             }
 
             if (args[0].equalsIgnoreCase("all")) {
                 RegisteredServer server = proxy.getServer(args[1]).orElse(null);
                 if (server == null) {
-                    source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize("Server not found."));
+                    String serverNotFoundMessage = configRoot.node("messages", "server-not-found").getString();
+                    assert serverNotFoundMessage != null;
+                    source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(serverNotFoundMessage));
                     return;
                 }
                 for (Player p : proxy.getAllPlayers()) {
@@ -314,7 +343,9 @@ public class VelocityBalancer {
 
             Player target = proxy.getPlayer(args[0]).orElse(null);
             if (target == null) {
-                source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize("Player not found."));
+                String playerNotFoundMessage = configRoot.node("messages", "player-not-found").getString();
+                assert playerNotFoundMessage != null;
+                source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(playerNotFoundMessage));
                 return;
             }
 
@@ -324,7 +355,9 @@ public class VelocityBalancer {
                 return;
             }
 
-            source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize("Server not found."));
+            String serverNotFoundMessage = configRoot.node("messages", "server-not-found").getString();
+            assert serverNotFoundMessage != null;
+            source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(serverNotFoundMessage));
         }
     }
 }
