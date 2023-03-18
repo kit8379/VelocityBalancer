@@ -11,6 +11,7 @@ import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
 import com.velocitypowered.api.proxy.server.RegisteredServer;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.slf4j.Logger;
 
@@ -45,6 +46,8 @@ public class VelocityBalancer {
         // Register commands
         proxy.getCommandManager().register("vbreload", new ReloadCommand());
         proxy.getCommandManager().register("hub", new LobbyCommand(), "lobby");
+        proxy.getCommandManager().register("send", new SendCommand());
+        proxy.getCommandManager().register("bsend", new BalanceSendCommand());
 
         // Offline server detection
         if ((Boolean) config.get("offlinedetection")) {
@@ -76,6 +79,7 @@ public class VelocityBalancer {
                 }
             }
         }
+        event.setResult(ServerPreConnectEvent.ServerResult.allowed(targetServer));
     }
 
 
@@ -208,6 +212,119 @@ public class VelocityBalancer {
                     player.createConnectionRequest(lobbyServer).fireAndForget();
                 }
             }
+        }
+    }
+
+    private class BalanceSendCommand implements SimpleCommand {
+        @Override
+        public void execute(@NonNull Invocation invocation) {
+            CommandSource source = invocation.source();
+            String[] args = invocation.arguments();
+
+            if (!(source instanceof Player)) {
+                source.sendMessage(Component.text("Console must specific a player name."));
+                return;
+            }
+
+            Player player = (Player) source;
+
+            if (!player.hasPermission("velocitybalancer.send")) {
+                source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize("No permission."));
+                return;
+            }
+
+            if (args.length < 2) {
+                source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize("Usage: /bsend <user> <server>"));
+                return;
+            }
+
+            if (args[0].equalsIgnoreCase("all")) {
+                RegisteredServer server = proxy.getServer(args[1]).orElse(null);
+                if (server == null) {
+                    source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize("Server not found."));
+                    return;
+                }
+                for (Player p : proxy.getAllPlayers()) {
+                    RegisteredServer bestserver = getBalancedServer(args[1], p);
+                    if (bestserver != null) {
+                        p.createConnectionRequest(bestserver).fireAndForget();
+                    } else {
+                        p.createConnectionRequest(server).fireAndForget();
+                    }
+                }
+                return;
+            }
+
+            Player target = proxy.getPlayer(args[0]).orElse(null);
+            if (target == null) {
+                source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize("Player not found."));
+                return;
+            }
+
+            RegisteredServer bestServer = getBalancedServer(args[1], target);
+            if (bestServer != null) {
+                target.createConnectionRequest(bestServer).fireAndForget();
+                return;
+            }
+
+            RegisteredServer server = proxy.getServer(args[1]).orElse(null);
+            if (server != null) {
+                target.createConnectionRequest(server).fireAndForget();
+                return;
+            }
+
+            source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize("Server not found."));
+        }
+    }
+
+    private class SendCommand implements SimpleCommand {
+        @Override
+        public void execute(@NonNull Invocation invocation) {
+            CommandSource source = invocation.source();
+            String[] args = invocation.arguments();
+
+            if (!(source instanceof Player)) {
+                source.sendMessage(Component.text("Console must specific a player name."));
+                return;
+            }
+
+            Player player = (Player) source;
+
+            if (!player.hasPermission("velocitybalancer.forcesend")) {
+                source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize("No permission."));
+                return;
+            }
+
+            if (args.length < 2) {
+                source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize("Usage: /send <user> <server>"));
+                return;
+            }
+
+            if (args[0].equalsIgnoreCase("all")) {
+                RegisteredServer server = proxy.getServer(args[1]).orElse(null);
+                if (server == null) {
+                    source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize("Server not found."));
+                    return;
+                }
+                for (Player p : proxy.getAllPlayers()) {
+                    p.createConnectionRequest(server).fireAndForget();
+                }
+                return;
+            }
+
+            Player target = proxy.getPlayer(args[0]).orElse(null);
+            if (target == null) {
+                source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize("Player not found."));
+                return;
+            }
+
+            RegisteredServer server = proxy.getServer(args[1]).orElse(null);
+            if (server != null) {
+                target.createConnectionRequest(server).fireAndForget();
+                return;
+            }
+
+            source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize("Server not found."));
         }
     }
 }
