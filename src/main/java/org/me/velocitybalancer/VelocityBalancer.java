@@ -48,6 +48,9 @@ public class VelocityBalancer {
         proxy.getCommandManager().register("send", new SendCommand());
         proxy.getCommandManager().register("bsend", new BalanceSendCommand());
 
+        // Register events
+        proxy.getEventManager().register(this, this);
+
         // Offline server detection
         if (configRoot.node("offlinedetection").getBoolean()) {
             long detectionInterval = configRoot.node("detectioninterval").getInt();
@@ -73,12 +76,19 @@ public class VelocityBalancer {
                 configRoot.node("lobbygroup").set("authgroup");
                 configRoot.node("offlinedetection").set(true);
                 configRoot.node("detectioninterval").set(10);
+
                 configRoot.node("balancing-groups", "authgroup", "servers").set(Arrays.asList("auth1", "auth2"));
                 configRoot.node("balancing-groups", "authgroup", "balancing").set(true);
                 configRoot.node("balancing-groups", "authgroup", "permission-redirect", "player.verifed").set("lobbygroup");
                 configRoot.node("balancing-groups", "lobbygroup", "servers").set(Arrays.asList("lobby1", "lobby2"));
                 configRoot.node("balancing-groups", "lobbygroup", "balancing").set(true);
                 configRoot.node("balancing-groups", "lobbygroup", "permission-redirect").set(Collections.emptyMap());
+
+                configRoot.node("messages", "no-permission").set("&eUsage:");
+                configRoot.node("messages", "send-usage").set("&e/tag set <tag>");
+                configRoot.node("messages", "bsend-usage").set("&e/tag reset");
+                configRoot.node("messages", "server-not-found").set("&aSuccess changed tag");
+                configRoot.node("messages", "player-not-found").set("&aSuccess remove tag");
 
                 loader.save(configRoot);
             }
@@ -97,11 +107,9 @@ public class VelocityBalancer {
         Map<String, Object> balancingGroups = configRoot.node("balancing-groups").childrenMap().entrySet().stream().collect(Collectors.toMap(e -> e.getKey().toString(), e -> e.getValue().raw()));
 
         for (String groupName : balancingGroups.keySet()) {
-            @SuppressWarnings("unchecked")
             Map<String, Object> group = (Map<String, Object>) balancingGroups.get(groupName);
             boolean isBalancing = (Boolean) group.get("balancing");
 
-            @SuppressWarnings("unchecked")
             List<String> servers = (List<String>) group.get("servers");
 
             if (isBalancing && servers.contains(targetServer.getServerInfo().getName())) {
@@ -132,7 +140,6 @@ public class VelocityBalancer {
 
         Map<String, Object> balancingGroups = configRoot.node("balancing-groups").childrenMap().entrySet().stream().collect(Collectors.toMap(e -> e.getKey().toString(), e -> e.getValue().raw()));
 
-        @SuppressWarnings("unchecked")
         Map<String, Object> group = (Map<String, Object>) balancingGroups.get(groupName);
 
         if (group == null) {
@@ -140,7 +147,6 @@ public class VelocityBalancer {
         }
 
         // Process the permission-redirect configuration
-        @SuppressWarnings("unchecked")
         Map<String, String> permissionRedirects = (Map<String, String>) group.get("permission-redirect");
         if (permissionRedirects != null) {
             for (String permission : permissionRedirects.keySet()) {
@@ -151,7 +157,6 @@ public class VelocityBalancer {
             }
         }
 
-        @SuppressWarnings("unchecked")
         List<String> servers = (List<String>) group.get("servers");
         List<RegisteredServer> candidateServers = new ArrayList<>();
 
@@ -192,9 +197,7 @@ public class VelocityBalancer {
         Map<String, Object> balancingGroups = configRoot.node("balancing-groups").childrenMap().entrySet().stream().collect(Collectors.toMap(e -> e.getKey().toString(), e -> e.getValue().raw()));
 
         for (Map.Entry<String, Object> groupEntry : balancingGroups.entrySet()) {
-            @SuppressWarnings("unchecked")
             Map<String, Object> group = (Map<String, Object>) groupEntry.getValue();
-            @SuppressWarnings("unchecked")
             List<String> servers = (List<String>) group.get("servers");
 
             for (String serverName : servers) {
