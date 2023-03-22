@@ -6,6 +6,7 @@ import com.velocitypowered.api.command.SimpleCommand;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.player.KickedFromServerEvent;
 import com.velocitypowered.api.event.player.ServerPreConnectEvent;
+import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
 import com.velocitypowered.api.plugin.Plugin;
 import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
@@ -41,15 +42,16 @@ public class VelocityBalancer {
     public VelocityBalancer(ProxyServer proxy, Logger logger) {
         this.proxy = proxy;
         this.logger = logger;
+    }
+
+    @Subscribe
+    public void onProxyInitalize(ProxyInitializeEvent event) {
         createConfigIfNotExists();
 
         // Register commands
         proxy.getCommandManager().register("hub", new LobbyCommand(), "lobby");
         proxy.getCommandManager().register("send", new SendCommand());
         proxy.getCommandManager().register("bsend", new BalanceSendCommand());
-
-        // Register events
-        proxy.getEventManager().register(this, this);
 
         // Offline server detection
         if (configRoot.node("offlinedetection").getBoolean()) {
@@ -84,11 +86,11 @@ public class VelocityBalancer {
                 configRoot.node("balancing-groups", "lobbygroup", "balancing").set(true);
                 configRoot.node("balancing-groups", "lobbygroup", "permission-redirect").set(Collections.emptyMap());
 
-                configRoot.node("messages", "no-permission").set("&eUsage:");
-                configRoot.node("messages", "send-usage").set("&e/tag set <tag>");
-                configRoot.node("messages", "bsend-usage").set("&e/tag reset");
-                configRoot.node("messages", "server-not-found").set("&aSuccess changed tag");
-                configRoot.node("messages", "player-not-found").set("&aSuccess remove tag");
+                configRoot.node("messages", "no-permission").set("&cYou don't have permission to use this command");
+                configRoot.node("messages", "send-usage").set("&e/send <user> <server>");
+                configRoot.node("messages", "bsend-usage").set("&e/bsend <user> <server>");
+                configRoot.node("messages", "server-not-found").set("&cServer not found");
+                configRoot.node("messages", "player-not-found").set("&cPlayer not found");
 
                 loader.save(configRoot);
             }
