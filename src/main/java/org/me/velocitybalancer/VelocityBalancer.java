@@ -29,7 +29,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 
-@Plugin(id = "velocitybalancer", name = "VelocityBalancer", version = "1.0", description = "A plugin to balance player connections across server groups")
+@Plugin(id = "velocitybalancer", name = "VelocityBalancer", version = "1.0.0", authors = {"TonyPak"})
 public class VelocityBalancer {
 
     private final ProxyServer proxy;
@@ -150,10 +150,12 @@ public class VelocityBalancer {
 
         // Process the permission-redirect configuration
         Map<String, String> permissionRedirects = (Map<String, String>) group.get("permission-redirect");
+        boolean allowOffline = false;
         if (permissionRedirects != null) {
             for (String permission : permissionRedirects.keySet()) {
                 if (player.hasPermission(permission)) {
                     String targetGroup = permissionRedirects.get(permission);
+                    allowOffline = true;
                     return getBalancedServer(targetGroup, player);
                 }
             }
@@ -177,7 +179,9 @@ public class VelocityBalancer {
         }
 
         // Filter the list to only include online servers
-        candidateServers.removeIf(server -> !serverStatus.getOrDefault(server.getServerInfo().getName(), false));
+        if (!allowOffline) {
+            candidateServers.removeIf(server -> !serverStatus.getOrDefault(server.getServerInfo().getName(), false));
+        }
 
         // Find the server with the lowest player count
         RegisteredServer bestServer = null;
