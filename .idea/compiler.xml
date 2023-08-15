@@ -10,7 +10,6 @@
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
-      <module name="velocitybalancer" target="1.8" />
       <module name="VelocityBalancer" target="1.8" />
     </bytecodeTargetLevel>
   </component>
