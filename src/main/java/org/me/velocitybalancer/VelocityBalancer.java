@@ -150,12 +150,10 @@ public class VelocityBalancer {
 
         // Process the permission-redirect configuration
         Map<String, String> permissionRedirects = (Map<String, String>) group.get("permission-redirect");
-        boolean allowOffline = false;
         if (permissionRedirects != null) {
             for (String permission : permissionRedirects.keySet()) {
                 if (player.hasPermission(permission)) {
                     String targetGroup = permissionRedirects.get(permission);
-                    allowOffline = true;
                     return getBalancedServer(targetGroup, player);
                 }
             }
@@ -179,9 +177,7 @@ public class VelocityBalancer {
         }
 
         // Filter the list to only include online servers
-        if (!allowOffline) {
-            candidateServers.removeIf(server -> !serverStatus.getOrDefault(server.getServerInfo().getName(), false));
-        }
+        candidateServers.removeIf(server -> !serverStatus.getOrDefault(server.getServerInfo().getName(), false));
 
         // Find the server with the lowest player count
         RegisteredServer bestServer = null;
