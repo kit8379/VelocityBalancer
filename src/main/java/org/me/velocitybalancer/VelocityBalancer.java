@@ -180,7 +180,7 @@ public class VelocityBalancer {
         candidateServers.removeIf(server -> !serverStatus.getOrDefault(server.getServerInfo().getName(), false));
 
         // Find the server with the lowest player count
-        RegisteredServer bestServer = null;
+        RegisteredServer bestServer = candidateServers.get(0);
         int lowestPlayerCount = Integer.MAX_VALUE;
 
         for (RegisteredServer server : candidateServers) {
