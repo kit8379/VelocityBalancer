@@ -6,11 +6,11 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
-        <module name="velocitybalancer" />
+        <module name="VelocityBalancer" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
-      <module name="VelocityBalancer" target="1.8" />
+      <module name="velocitybalancer" target="1.8" />
     </bytecodeTargetLevel>
   </component>
 </project>

@@ -1,0 +1,28 @@
+lobbygroup: "lobby"
+offlinedetection: true
+detectioninterval: 10
+
+balancing-groups:
+  lobby:
+    servers:
+      - "lobby1"
+      - "lobby2"
+    balancing: true
+    permission-redirect:
+      "player.lobby": "lobby"
+
+  authgroup:
+    servers:
+      - "auth1"
+      - "auth2"
+    balancing: true
+    permission-redirect:
+      "player.auth": "authgroup"
+
+messages:
+  no-permission: "&cYou don't have permission to use this command."
+  send-usage: "&eUsage: /send <player> <server>"
+  bsend-usage: "&eUsage: /bsend <player|all> <group>"
+  server-not-found: "&cServer not found."
+  player-not-found: "&cPlayer not found."
+  reload: "&aConfiguration reloaded."
