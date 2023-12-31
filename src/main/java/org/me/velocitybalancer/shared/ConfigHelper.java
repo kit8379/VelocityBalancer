@@ -69,7 +69,7 @@ public class ConfigHelper {
 
     // Methods to get messages
     public String getNoPermissionMessage() {
-        return Utils.colorize(configData.node("messages", "no-permission").getString("&cYou don't have permission to use this command"));
+        return Utils.colorize(configData.node("messages", "no-permission").getString("&cYou don't have permission to use this command."));
     }
 
     public String getSendUsageMessage() {
@@ -81,14 +81,46 @@ public class ConfigHelper {
     }
 
     public String getServerNotFoundMessage() {
-        return Utils.colorize(configData.node("messages", "server-not-found").getString("&cServer not found"));
+        return Utils.colorize(configData.node("messages", "server-not-found").getString("&cServer not found."));
     }
 
     public String getPlayerNotFoundMessage() {
-        return Utils.colorize(configData.node("messages", "player-not-found").getString("&cPlayer not found"));
+        return Utils.colorize(configData.node("messages", "player-not-found").getString("&cPlayer not found."));
     }
 
     public String getReloadMessage() {
-        return Utils.colorize(configData.node("messages", "reload").getString("&aReloaded config"));
+        return Utils.colorize(configData.node("messages", "reload").getString("&aConfiguration reloaded."));
+    }
+
+    public String getPlayerOnlyMessage() {
+        return Utils.colorize(configData.node("messages", "player-only").getString("&cOnly players can use this command."));
+    }
+
+    public String getServerOfflineMessage() {
+        return Utils.colorize(configData.node("messages", "server-offline").getString("&cServer is offline."));
+    }
+
+    public String getLobbyGroupNotFoundMessage() {
+        return Utils.colorize(configData.node("messages", "lobby-group-not-found").getString("&cLobby group not found."));
+    }
+
+    public String getSendSuccessMessage(String playerName, String serverName) {
+        String messageTemplate = configData.node("messages", "send-success").getString("&aSuccessfully sent %player% to %server%.");
+        return Utils.colorize(messageTemplate.replace("%player%", playerName).replace("%server%", serverName));
+    }
+
+    public String getSendAllSuccessMessage(String serverName) {
+        String messageTemplate = configData.node("messages", "send-all-success").getString("&aSuccessfully sent all players to %server%.");
+        return Utils.colorize(messageTemplate.replace("%server%", serverName));
+    }
+
+    public String getBsendSuccessMessage(String playerName, String serverName) {
+        String messageTemplate = configData.node("messages", "send-success").getString("&aSuccessfully balanced sent %player% to %server%.");
+        return Utils.colorize(messageTemplate.replace("%player%", playerName).replace("%server%", serverName));
+    }
+
+    public String getBsendAllSuccessMessage(String serverName) {
+        String messageTemplate = configData.node("messages", "bsend-all-success").getString("&aSuccessfully balanced sent all players to %server%.");
+        return Utils.colorize(messageTemplate.replace("%server%", serverName));
     }
 }

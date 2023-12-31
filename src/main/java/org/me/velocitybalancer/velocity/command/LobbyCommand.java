@@ -3,7 +3,6 @@ package org.me.velocitybalancer.velocity.command;
 import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.command.SimpleCommand;
 import com.velocitypowered.api.proxy.Player;
-import com.velocitypowered.api.proxy.ProxyServer;
 import com.velocitypowered.api.proxy.server.RegisteredServer;
 import net.kyori.adventure.text.Component;
 import org.me.velocitybalancer.shared.ConfigHelper;
@@ -23,7 +22,7 @@ public class LobbyCommand implements SimpleCommand {
     public void execute(Invocation invocation) {
         CommandSource source = invocation.source();
         if (!(source instanceof Player)) {
-            source.sendMessage(Component.text("Only players can use this command."));
+            source.sendMessage(Component.text(configHelper.getPlayerOnlyMessage()));
             return;
         }
 
@@ -35,10 +34,10 @@ public class LobbyCommand implements SimpleCommand {
             if (lobbyServer != null) {
                 player.createConnectionRequest(lobbyServer).fireAndForget();
             } else {
-                player.sendMessage(Component.text("No lobby server available."));
+                player.sendMessage(Component.text(configHelper.getServerOfflineMessage()));
             }
         } else {
-            player.sendMessage(Component.text("Lobby group is not configured."));
+            player.sendMessage(Component.text(configHelper.getLobbyGroupNotFoundMessage()));
         }
     }
 }

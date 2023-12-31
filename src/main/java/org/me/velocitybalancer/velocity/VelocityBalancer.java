@@ -18,8 +18,6 @@ import org.me.velocitybalancer.velocity.command.LobbyCommand;
 import org.me.velocitybalancer.velocity.command.ReloadCommand;
 import org.me.velocitybalancer.velocity.command.SendCommand;
 
-
-
 @Plugin(id = "velocitybalancer", name = "VelocityBalancer", version = "1.0.0", description = "A server balancing plugin", authors = {"kit8379"})
 public class VelocityBalancer {
     private final Logger logger;

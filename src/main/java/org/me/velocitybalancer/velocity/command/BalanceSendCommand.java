@@ -9,7 +9,6 @@ import net.kyori.adventure.text.Component;
 import org.me.velocitybalancer.shared.ConfigHelper;
 import org.me.velocitybalancer.shared.ServerBalancer;
 
-import java.lang.reflect.Proxy;
 import java.util.Optional;
 
 public class BalanceSendCommand implements SimpleCommand {
@@ -47,7 +46,7 @@ public class BalanceSendCommand implements SimpleCommand {
                     player.createConnectionRequest(balancedServer).fireAndForget();
                 }
             }
-            source.sendMessage(Component.text("All players have been sent to a balanced server in group " + targetGroupName));
+            source.sendMessage(Component.text(configHelper.getBsendAllSuccessMessage(targetGroupName)));
         } else {
             Optional<Player> targetPlayer = proxy.getPlayer(args[0]);
             if (targetPlayer.isEmpty()) {
@@ -58,9 +57,9 @@ public class BalanceSendCommand implements SimpleCommand {
             RegisteredServer balancedServer = serverBalancer.getBalancedServer(targetGroupName, targetPlayer.get());
             if (balancedServer != null) {
                 targetPlayer.get().createConnectionRequest(balancedServer).fireAndForget();
-                source.sendMessage(Component.text("Player " + targetPlayer.get().getUsername() + " has been sent to a balanced server in group " + targetGroupName));
+                source.sendMessage(Component.text(configHelper.getBsendSuccessMessage(targetPlayer.get().getUsername(), targetGroupName)));
             } else {
-                source.sendMessage(Component.text("No balanced server available in group " + targetGroupName));
+                source.sendMessage(Component.text(configHelper.getServerOfflineMessage()));
             }
         }
     }

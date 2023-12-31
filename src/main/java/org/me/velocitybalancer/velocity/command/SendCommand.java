@@ -35,6 +35,21 @@ public class SendCommand implements SimpleCommand {
             return;
         }
 
+        if (args[0].equalsIgnoreCase("all")) {
+            String targetServerName = args[1];
+            Optional<RegisteredServer> targetServer = proxy.getServer(targetServerName);
+            if (targetServer.isEmpty()) {
+                source.sendMessage(Component.text(configHelper.getServerNotFoundMessage()));
+                return;
+            }
+
+            for (Player player : proxy.getAllPlayers()) {
+                player.createConnectionRequest(targetServer.get()).fireAndForget();
+            }
+            source.sendMessage(Component.text(configHelper.getSendAllSuccessMessage(targetServerName)));
+            return;
+        }
+
         String targetPlayerName = args[0];
         String targetServerName = args[1];
 
@@ -51,6 +66,6 @@ public class SendCommand implements SimpleCommand {
         }
 
         targetPlayer.get().createConnectionRequest(targetServer.get()).fireAndForget();
-        source.sendMessage(Component.text("Player " + targetPlayerName + " has been sent to " + targetServerName + "."));
+        source.sendMessage(Component.text(configHelper.getSendSuccessMessage(targetPlayerName, targetServerName)));
     }
 }
