@@ -21,8 +21,14 @@ public class LobbyCommand implements SimpleCommand {
     @Override
     public void execute(Invocation invocation) {
         CommandSource source = invocation.source();
+
         if (!(source instanceof Player)) {
             source.sendMessage(Component.text(configHelper.getPlayerOnlyMessage()));
+            return;
+        }
+
+        if (!source.hasPermission("velocitybalancer.hub")) {
+            source.sendMessage(Component.text(configHelper.getNoPermissionMessage()));
             return;
         }
 

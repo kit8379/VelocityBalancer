@@ -20,7 +20,7 @@ public class ReloadCommand implements SimpleCommand {
     public void execute(Invocation invocation) {
         CommandSource source = invocation.source();
 
-        if (!source.hasPermission("bungeevelocitylist.reload")) {
+        if (!source.hasPermission("velocitybalancer.reload")) {
             source.sendMessage(Component.text(config.getNoPermissionMessage()));
             return;
         }

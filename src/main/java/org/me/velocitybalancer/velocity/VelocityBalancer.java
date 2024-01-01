@@ -13,7 +13,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 import org.me.velocitybalancer.shared.ServerBalancer;
-import org.me.velocitybalancer.velocity.command.BalanceSendCommand;
 import org.me.velocitybalancer.velocity.command.LobbyCommand;
 import org.me.velocitybalancer.velocity.command.ReloadCommand;
 import org.me.velocitybalancer.velocity.command.SendCommand;
@@ -51,8 +50,7 @@ public class VelocityBalancer {
         serverBalancer = new ServerBalancer(proxy, configHelper);
 
         proxy.getCommandManager().register("hub", new LobbyCommand(configHelper, serverBalancer), "lobby");
-        proxy.getCommandManager().register("send", new SendCommand(proxy, configHelper));
-        proxy.getCommandManager().register("bsend", new BalanceSendCommand(proxy, configHelper, serverBalancer));
+        proxy.getCommandManager().register("send", new SendCommand(proxy, configHelper, serverBalancer));
         proxy.getCommandManager().register("balancereload", new ReloadCommand(this, configHelper));
 
         if (configHelper.isOfflineDetectionEnabled()) {
