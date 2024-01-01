@@ -21,11 +21,11 @@ public class ReloadCommand implements SimpleCommand {
         CommandSource source = invocation.source();
 
         if (!source.hasPermission("velocitybalancer.reload")) {
-            source.sendMessage(Component.text(config.getNoPermissionMessage()));
+            source.sendMessage(Component.text(config.getMessage("no-permission")));
             return;
         }
 
         plugin.reload();
-        source.sendMessage(Component.text(config.getReloadMessage()));
+        source.sendMessage(Component.text(config.getMessage("reload-message")));
     }
 }

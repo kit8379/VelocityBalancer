@@ -8,9 +8,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.logging.Logger;
 
 public class ConfigHelper {
+
     private final Logger logger;
     private final Path dataFolder;
     private ConfigurationNode configData;
@@ -38,7 +41,7 @@ public class ConfigHelper {
                     if (defaultConfigStream != null) {
                         Files.copy(defaultConfigStream, configFile);
                     } else {
-                        throw new IOException("Could not find default config in resources!");
+                        throw new IOException("Default config not found in resources!");
                     }
                 }
             }
@@ -49,65 +52,39 @@ public class ConfigHelper {
     }
 
     public String getLobbyGroup() {
-        return configData.node("lobbygroup").getString();
+        return configData.node("lobbygroup").getString("lobbygroup");
     }
 
     public boolean isOfflineDetectionEnabled() {
-        return configData.node("offlinedetection").getBoolean();
+        return configData.node("offlinedetection").getBoolean(true);
     }
 
     public int getDetectionInterval() {
-        return configData.node("detectioninterval").getInt();
+        return configData.node("detectioninterval").getInt(10);
     }
 
-    public ConfigurationNode getGroup(String groupName) {
-        return configData.node("balancing-groups").node(groupName);
+    public Map<Object, ? extends ConfigurationNode> getBalancingGroups() {
+        return configData.node("balancing-groups").childrenMap();
     }
 
-    public boolean isGroupName(String name) {
-        return configData.node("balancing-groups").hasChild(name);
+    public String getMessage(String key) {
+        return Utils.colorize(configData.node("messages", key).getString());
     }
 
-    // Message retrieval methods
-    public String getNoPermissionMessage() {
-        return Utils.colorize(configData.node("messages", "no-permission").getString("&cYou don't have permission to use this command."));
-    }
-
-    public String getSendUsageMessage() {
-        return Utils.colorize(configData.node("messages", "send-usage").getString("&e/send <user> <server>"));
-    }
-
-    public String getServerNotFoundMessage() {
-        return Utils.colorize(configData.node("messages", "server-not-found").getString("&cServer not found."));
-    }
-
-    public String getPlayerNotFoundMessage() {
-        return Utils.colorize(configData.node("messages", "player-not-found").getString("&cPlayer not found."));
-    }
-
-    public String getReloadMessage() {
-        return Utils.colorize(configData.node("messages", "reload").getString("&aConfiguration reloaded."));
-    }
-
-    public String getPlayerOnlyMessage() {
-        return Utils.colorize(configData.node("messages", "player-only").getString("&cOnly players can use this command."));
-    }
-
-    public String getServerOfflineMessage() {
-        return Utils.colorize(configData.node("messages", "server-offline").getString("&cServer is offline."));
-    }
-
-    public String getLobbyGroupNotFoundMessage() {
-        return Utils.colorize(configData.node("messages", "lobby-group-not-found").getString("&cLobby group not found."));
-    }
-
-    public String getSendSuccessMessage(String playerName, String serverName) {
-        String messageTemplate = configData.node("messages", "send-success").getString("&aSuccessfully sent %player% to %server%.");
-        return Utils.colorize(messageTemplate.replace("%player%", playerName).replace("%server%", serverName));
-    }
-
-    public String getSendAllSuccessMessage(String serverName) {
-        String messageTemplate = configData.node("messages", "send-all-success").getString("&aSuccessfully sent all players to %server%.");
-        return Utils.colorize(messageTemplate.replace("%server%", serverName));
+    public Map<String, String> getPermissionRedirects(String groupName) {
+        Map<String, String> permissionRedirects = new HashMap<>();
+        try {
+            ConfigurationNode redirectNode = configData.node("balancing-groups", groupName, "permission-redirect");
+            if (!redirectNode.virtual()) {
+                for (Map.Entry<Object, ? extends ConfigurationNode> entry : redirectNode.childrenMap().entrySet()) {
+                    String key = entry.getKey().toString();
+                    String value = entry.getValue().getString();
+                    permissionRedirects.put(key, value);
+                }
+            }
+        } catch (Exception e) {
+            logger.warning("Failed to get permission redirects from config: " + e.getMessage());
+        }
+        return permissionRedirects;
     }
 }

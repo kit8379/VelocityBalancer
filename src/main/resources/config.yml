@@ -21,16 +21,9 @@ balancing-groups:
 
 messages:
   no-permission: "&cYou don't have permission to use this command."
-  send-usage: "&eUsage: /send <player> <server>"
-  bsend-usage: "&eUsage: /bsend <player|all> <group>"
+  send-usage: "&e/send <user> <server>"
+  bsend-usage: "&e/bsend <user> <server>"
   server-not-found: "&cServer not found."
   player-not-found: "&cPlayer not found."
   reload: "&aConfiguration reloaded."
   player-only: "&cOnly players can use this command."
-  server-offline: "&cServer is offline."
-  lobby-group-not-found: "&cLobby group not found."
-  send-success: "&aSuccessfully sent %player% to %server%."
-  send-all-success: "&aSuccessfully sent all players to %server%."
-  bsend-success: "&aSuccessfully balanced sent %player% to %server%."
-  bsend-all-success: "&aSuccessfully balanced sent all players to %server%."
-

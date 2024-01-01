@@ -9,12 +9,14 @@ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.me.velocitybalancer.shared.ConfigHelper;
 import org.me.velocitybalancer.velocity.VelocityBalancer;
 
-public class SendCommand implements SimpleCommand {
+public class BalanceSendCommand implements SimpleCommand {
 
+    private final VelocityBalancer plugin;
     private final ProxyServer proxy;
     private final ConfigHelper configHelper;
 
-    public SendCommand(ProxyServer proxy, ConfigHelper configHelper) {
+    public BalanceSendCommand(VelocityBalancer plugin, ProxyServer proxy, ConfigHelper configHelper) {
+        this.plugin = plugin;
         this.proxy = proxy;
         this.configHelper = configHelper;
     }
@@ -26,15 +28,15 @@ public class SendCommand implements SimpleCommand {
 
         Player player = (Player) source;
 
-        if (!player.hasPermission("velocitybalancer.forcesend")) {
+        if (!player.hasPermission("velocitybalancer.send")) {
             String noPermissionMessage = configHelper.getMessage("no-permission");
             source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(noPermissionMessage));
             return;
         }
 
         if (args.length < 2) {
-            String sendUsageMessage = configHelper.getMessage("send-usage");
-            source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(sendUsageMessage));
+            String bsendUsageMessage = configHelper.getMessage("bsend-usage");
+            source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(bsendUsageMessage));
             return;
         }
 
@@ -46,7 +48,8 @@ public class SendCommand implements SimpleCommand {
                 return;
             }
             for (Player p : proxy.getAllPlayers()) {
-                p.createConnectionRequest(server).fireAndForget();
+                RegisteredServer bestserver = plugin.getBalancedServer(args[1], p);
+                p.createConnectionRequest(bestserver != null ? bestserver : server).fireAndForget();
             }
             return;
         }
@@ -58,12 +61,7 @@ public class SendCommand implements SimpleCommand {
             return;
         }
 
-        RegisteredServer server = proxy.getServer(args[1]).orElse(null);
-        if (server != null) {
-            target.createConnectionRequest(server).fireAndForget();
-        } else {
-            String serverNotFoundMessage = configHelper.getMessage("server-not-found");
-            source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(serverNotFoundMessage));
-        }
+        RegisteredServer bestServer = plugin.getBalancedServer(args[1], target);
+        target.createConnectionRequest(bestServer != null ? bestServer : proxy.getServer(args[1]).orElse(null)).fireAndForget();
     }
 }

@@ -4,18 +4,19 @@ import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.command.SimpleCommand;
 import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.server.RegisteredServer;
-import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.me.velocitybalancer.shared.ConfigHelper;
-import org.me.velocitybalancer.shared.ServerBalancer;
+import net.kyori.adventure.text.Component;
+import org.me.velocitybalancer.velocity.VelocityBalancer;
 
 public class LobbyCommand implements SimpleCommand {
 
+    private final VelocityBalancer plugin;
     private final ConfigHelper configHelper;
-    private final ServerBalancer serverBalancer;
 
-    public LobbyCommand(ConfigHelper configHelper, ServerBalancer serverBalancer) {
+    public LobbyCommand(VelocityBalancer plugin, ConfigHelper configHelper) {
+        this.plugin = plugin;
         this.configHelper = configHelper;
-        this.serverBalancer = serverBalancer;
     }
 
     @Override
@@ -23,27 +24,26 @@ public class LobbyCommand implements SimpleCommand {
         CommandSource source = invocation.source();
 
         if (!(source instanceof Player)) {
-            source.sendMessage(Component.text(configHelper.getPlayerOnlyMessage()));
-            return;
-        }
-
-        if (!source.hasPermission("velocitybalancer.hub")) {
-            source.sendMessage(Component.text(configHelper.getNoPermissionMessage()));
+            String onlyPlayerMessage = configHelper.getMessage("player-only");
+            source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(onlyPlayerMessage));
             return;
         }
 
         Player player = (Player) source;
+
+        if (!player.hasPermission("velocitybalancer.hub")) {
+            String noPermissionMessage = configHelper.getMessage("no-permission");
+            source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(noPermissionMessage));
+            return;
+        }
+
         String lobbyGroup = configHelper.getLobbyGroup();
 
-        if (lobbyGroup != null) {
-            RegisteredServer lobbyServer = serverBalancer.getBalancedServer(lobbyGroup, player);
+        if (lobbyGroup != null && !lobbyGroup.isEmpty()) {
+            RegisteredServer lobbyServer = plugin.getBalancedServer(lobbyGroup, player);
             if (lobbyServer != null) {
                 player.createConnectionRequest(lobbyServer).fireAndForget();
-            } else {
-                player.sendMessage(Component.text(configHelper.getServerOfflineMessage()));
             }
-        } else {
-            player.sendMessage(Component.text(configHelper.getLobbyGroupNotFoundMessage()));
         }
     }
 }
