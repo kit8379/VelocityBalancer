@@ -162,14 +162,12 @@ public class VelocityBalancer {
                         server.ping().whenComplete((ping, throwable) -> {
                             if (throwable == null) {
                                 serverStatus.put(serverName, true);
-                                logger.warning("Server " + serverName + " is online.");
                             } else {
                                 serverStatus.put(serverName, false);
-                                logger.warning("Server " + serverName + " is offline. Error: " + throwable.getMessage());
                             }
                         });
                     } else {
-                        logger.warning("Server " + serverName + " not found.");
+                        serverStatus.put(serverName, false);
                     }
                 }
             }
