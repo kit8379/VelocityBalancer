@@ -1,28 +1,21 @@
 package org.me.velocitybalancer.velocity;
 
 import com.google.inject.Inject;
-import com.velocitypowered.api.command.CommandSource;
-import com.velocitypowered.api.command.SimpleCommand;
 import com.velocitypowered.api.event.Subscribe;
-import com.velocitypowered.api.event.player.KickedFromServerEvent;
-import com.velocitypowered.api.event.player.ServerPreConnectEvent;
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
 import com.velocitypowered.api.event.proxy.ProxyShutdownEvent;
 import com.velocitypowered.api.plugin.Plugin;
 import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
 import com.velocitypowered.api.proxy.server.RegisteredServer;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.me.velocitybalancer.shared.ConfigHelper;
 import org.me.velocitybalancer.velocity.command.BalanceSendCommand;
 import org.me.velocitybalancer.velocity.command.LobbyCommand;
+import org.me.velocitybalancer.velocity.command.ReloadCommand;
 import org.me.velocitybalancer.velocity.command.SendCommand;
-import org.me.velocitybalancer.velocity.event.KickedFromServerEventHandler;
 import org.me.velocitybalancer.velocity.event.ServerPreConnectEventHandler;
 import org.spongepowered.configurate.ConfigurationNode;
 import org.spongepowered.configurate.serialize.SerializationException;
-
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -30,7 +23,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 
-@Plugin(id = "velocitybalancer", name = "VelocityBalancer", version = "1.0.0", description = "A plugin for balancing.",authors = {"kit8379"})
+@Plugin(id = "velocitybalancer", name = "VelocityBalancer", version = "1.0.0", description = "A plugin for balancing.", authors = {"kit8379"})
 public class VelocityBalancer {
 
     private final ProxyServer proxy;
@@ -66,16 +59,15 @@ public class VelocityBalancer {
         proxy.getCommandManager().register("hub", new LobbyCommand(this, configHelper), "lobby");
         proxy.getCommandManager().register("send", new SendCommand(proxy, configHelper));
         proxy.getCommandManager().register("bsend", new BalanceSendCommand(this, proxy, configHelper));
+        proxy.getCommandManager().register("vbreload", new ReloadCommand(this, configHelper));
 
         // Register events
-        proxy.getEventManager().register(this, new KickedFromServerEventHandler(this, configHelper));
         proxy.getEventManager().register(this, new ServerPreConnectEventHandler(this, configHelper));
 
         // Offline server detection
         if (configHelper.isOfflineDetectionEnabled()) {
             long detectionInterval = configHelper.getDetectionInterval();
-            proxy.getScheduler().buildTask(this, this::checkOfflineServers)
-                    .repeat(detectionInterval, TimeUnit.SECONDS).schedule();
+            proxy.getScheduler().buildTask(this, this::checkOfflineServers).repeat(detectionInterval, TimeUnit.SECONDS).schedule();
         }
     }
 
@@ -138,9 +130,7 @@ public class VelocityBalancer {
         candidateServers.removeIf(server -> !serverStatus.getOrDefault(server.getServerInfo().getName(), false));
 
         // Find the server with the lowest player count
-        return candidateServers.stream()
-                .min(Comparator.comparingInt(server -> server.getPlayersConnected().size()))
-                .orElse(null);
+        return candidateServers.stream().min(Comparator.comparingInt(server -> server.getPlayersConnected().size())).orElse(null);
     }
 
     private void checkOfflineServers() {

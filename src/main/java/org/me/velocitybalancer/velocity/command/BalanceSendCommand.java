@@ -28,7 +28,7 @@ public class BalanceSendCommand implements SimpleCommand {
 
         Player player = (Player) source;
 
-        if (!player.hasPermission("velocitybalancer.send")) {
+        if (!player.hasPermission("velocitybalancer.bsend")) {
             String noPermissionMessage = configHelper.getMessage("no-permission");
             source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(noPermissionMessage));
             return;
